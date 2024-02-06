@@ -1,0 +1,8 @@
+<div class="grid-container">
+  <div *ngFor="let row of rows; let rowIndex = index" class="row">
+    <div
+      *ngFor="let cell of cells; let colIndex = index" class="cell" data-id="{{rowIndex +':'+ colIndex}}"
+      [ngClass]="getClassForCell(rowIndex +':'+ colIndex)">
+    </div>
+  </div>
+</div>
