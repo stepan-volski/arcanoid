@@ -9,31 +9,33 @@ export class GameComponent implements OnInit {
   constructor(private renderer: Renderer2) {}
 
   rows = Array.from({ length: 15 });
-  cells = Array.from({ length: 15 });
+  cells = Array.from({ length: 25 });
 
   map: { [id: string]: number } = {};
   currentPosition = '13:4';
-  prevPosition = '0:0';
+  prevPosition = '';
   direction = '1:1';
+  interval: any;
+  isDevMode = true;
 
   ngOnInit(): void {
     this.initMap();
     this.drawBallInCurrentPosition();
-    //this.move();
-    //setInterval(()=> this.move(), 100);
   }
 
   initMap() {
-    for (let i = 0; i < 15; i++) {
-      let topId = 0 + ':' + i;
-      let bottomId = 14 + ':' + i;
+    for (let i = 0; i < this.rows.length; i++) {
       let leftId = i + ':' + 0;
-      let rightId = i + ':' + 14;
-
-      this.map[topId] = 2;
-      this.map[bottomId] = 2;
+      let rightId = i + ':' + (this.cells.length - 1);
       this.map[leftId] = 2;
       this.map[rightId] = 2;
+    }
+
+    for (let i = 0; i< this.cells.length; i++) {
+      let topId = 0 + ':' + i;
+      let bottomId = (this.rows.length - 1) + ':' + i;
+      this.map[topId] = 2;
+      this.map[bottomId] = 2;
     }
   }
 
@@ -63,7 +65,6 @@ export class GameComponent implements OnInit {
     const yDir = +this.direction.split(':')[1];
     let newXPos, newYPos;
 
-    //TODO to prettify
     if (this.direction === '1:1' || this.direction === '-1:-1') {
       newXPos = bRow - xDir;
       newYPos = bCol + yDir;
@@ -89,8 +90,13 @@ export class GameComponent implements OnInit {
     this.drawBallInCurrentPosition();
   }
 
+  placeWallAfterClick(id: string){
+    this.map[id] = 2;
+  }
+
   updateDirection() {
-    let walls = this.getThreeNextCellsInCurrentDirection();
+    let tmp = [...this.getThreeNextCellsInCurrentDirection()];
+    let cells = [this.isCellEmpty(tmp[0]), this.isCellEmpty(tmp[1]), this.isCellEmpty(tmp[2])];
 
     const x = +this.direction.split(':')[0];
     const y = +this.direction.split(':')[1];
@@ -98,17 +104,29 @@ export class GameComponent implements OnInit {
     let newX = 0;
     let newY = 0;
 
-    switch (walls.join(':')) {
+    switch (cells.join(':')) {
+      //collision from the left
       case '1:0:0':
       case '1:1:0':
-        newX = x;
-        newY = -y;
+        if (this.direction === '-1:-1' || this.direction === '1:1') {
+          newX = x;
+          newY = -y; //change only up/down direction to opposite
+        } else {
+          newX = -x; //change only right/left direction to opposite
+          newY = y;
+        }
         break;
 
+      //collision from the right
       case '0:0:1':
       case '0:1:1':
-        newX = -x;
-        newY = y;
+        if (this.direction === '-1:-1' || this.direction === '1:1') {
+          newX = -x;  //change only right/left direction to opposite
+          newY = y;
+        } else {
+          newX = x;
+          newY = -y; //change only up/down direction to opposite
+        }
         break;
 
       case '0:1:0':
@@ -128,15 +146,18 @@ export class GameComponent implements OnInit {
 
   }
 
-  printt(){
+  print(){
     console.log('direction: ' + this.direction);
     console.log('current position: ' + this.currentPosition);
-    this.getThreeNextCellsInCurrentDirection();
+    let cells = [...this.getThreeNextCellsInCurrentDirection()];
+    console.log('left cell: ' + cells[0]);
+    console.log('middle cell: ' + cells[1]);
+    console.log('right cell: ' + cells[2]);
   }
 
 
   getThreeNextCellsInCurrentDirection() {
-    let cells: number[] = [];
+    let cells: string[] = [];
 
     const ballRow = +this.currentPosition.split(':')[0];
     const ballCol = +this.currentPosition.split(':')[1];
@@ -171,13 +192,9 @@ export class GameComponent implements OnInit {
       break;
     }
 
-    cells.push(this.isCellEmpty(leftCell));
-    cells.push(this.isCellEmpty(middleCell));
-    cells.push(this.isCellEmpty(rightCell));
-
-    console.log('left cell: ' + leftCell);
-    console.log('right cell: ' + rightCell);
-    console.log('middle cell: ' + middleCell);
+    cells.push(leftCell);
+    cells.push(middleCell);
+    cells.push(rightCell);
 
     return cells;
   }
@@ -188,5 +205,17 @@ export class GameComponent implements OnInit {
     }
 
     return 0;
+  }
+
+  stop(){
+    clearInterval(this.interval);
+  }
+
+  start(){
+    this.interval = setInterval(()=> this.move(), 100);
+  }
+
+  toggleDevMode(){
+    this.isDevMode = !this.isDevMode;
   }
 }

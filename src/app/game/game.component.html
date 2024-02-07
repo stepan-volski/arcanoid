@@ -3,16 +3,22 @@
     <div
       *ngFor="let cell of cells; let colIndex = index" class="cell" data-id="{{rowIndex +':'+ colIndex}}"
       [ngClass]="getClassForCell(rowIndex +':'+ colIndex)"
-      (click)="placeBallAfterClick(rowIndex +':'+ colIndex)"
-      >{{rowIndex +':'+ colIndex}}
+      (click)="placeWallAfterClick(rowIndex +':'+ colIndex)"
+      [style.border]="isDevMode ? '1px solid black' : 'none'"
+      >
+      <div *ngIf="isDevMode">
+        {{rowIndex +':'+ colIndex}}
+      </div>
     </div>
   </div>
 </div>
 
-<button (click)="printt()">Print</button>
+<button (click)="print()">Print</button>
 <button (click)="move()">Move</button>
-
-<button (click)="setDirection(1, 1)">Up-right(1:1)</button>
-<button (click)="setDirection(1, -1)">Down-right(1:-1)</button>
-<button (click)="setDirection(-1, 1)">Up-left(-1:1)</button>
-<button (click)="setDirection(-1, -1)">Down-left(-1:-1)</button>
+<button (click)="setDirection(1, 1)">right-up(1:1)</button>
+<button (click)="setDirection(1, -1)">right-down(1:-1)</button>
+<button (click)="setDirection(-1, 1)">left-up(-1:1)</button>
+<button (click)="setDirection(-1, -1)">left-down(-1:-1)</button>
+<button (click)="stop()">stop</button>
+<button (click)="start()">start</button>
+<button (click)="toggleDevMode()">devMode</button>
