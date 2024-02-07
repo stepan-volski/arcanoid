@@ -2,7 +2,17 @@
   <div *ngFor="let row of rows; let rowIndex = index" class="row">
     <div
       *ngFor="let cell of cells; let colIndex = index" class="cell" data-id="{{rowIndex +':'+ colIndex}}"
-      [ngClass]="getClassForCell(rowIndex +':'+ colIndex)">
+      [ngClass]="getClassForCell(rowIndex +':'+ colIndex)"
+      (click)="placeBallAfterClick(rowIndex +':'+ colIndex)"
+      >{{rowIndex +':'+ colIndex}}
     </div>
   </div>
 </div>
+
+<button (click)="printt()">Print</button>
+<button (click)="move()">Move</button>
+
+<button (click)="setDirection(1, 1)">Up-right(1:1)</button>
+<button (click)="setDirection(1, -1)">Down-right(1:-1)</button>
+<button (click)="setDirection(-1, 1)">Up-left(-1:1)</button>
+<button (click)="setDirection(-1, -1)">Down-left(-1:-1)</button>

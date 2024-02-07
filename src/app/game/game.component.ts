@@ -3,141 +3,190 @@ import { Component, OnInit, Renderer2 } from '@angular/core';
 @Component({
   selector: 'app-game',
   templateUrl: './game.component.html',
-  styleUrls: ['./game.component.css']
+  styleUrls: ['./game.component.css'],
 })
 export class GameComponent implements OnInit {
-
   constructor(private renderer: Renderer2) {}
 
   rows = Array.from({ length: 15 });
   cells = Array.from({ length: 15 });
 
-  map: {[id: string]: number} = {};
-
-  // ngSwitch, set cell class depending on cell value in array; 0 = empty, 1 = ball, 3 = wall
-
+  map: { [id: string]: number } = {};
+  currentPosition = '13:4';
+  prevPosition = '0:0';
+  direction = '1:1';
 
   ngOnInit(): void {
     this.initMap();
-
-    this.map['2:4'] = 1;
+    this.drawBallInCurrentPosition();
+    //this.move();
+    //setInterval(()=> this.move(), 100);
   }
 
-  initMap(){
-    for (let i = 0; i < 100; i++) {
-      this.map[i] = 0;
+  initMap() {
+    for (let i = 0; i < 15; i++) {
+      let topId = 0 + ':' + i;
+      let bottomId = 14 + ':' + i;
+      let leftId = i + ':' + 0;
+      let rightId = i + ':' + 14;
+
+      this.map[topId] = 2;
+      this.map[bottomId] = 2;
+      this.map[leftId] = 2;
+      this.map[rightId] = 2;
     }
-  }
-
-  getCellById(id: string): HTMLElement | null {
-    const cellElements = document.querySelectorAll(`[id="${id}"]`);
-
-    if (cellElements.length > 0) {
-      return cellElements[0] as HTMLElement;
-    }
-
-    return null;
-  }
-
-  placeBallInCell(id: string) {
-    const cell = this.getCellById(id);
-    console.log(cell)
-    this.renderer.addClass(cell, 'ball');
-  }
-
-  removeBallFromCell(id: string) {
-    const cell = this.getCellById(id);
-    this.renderer.removeClass(cell, 'ball');
   }
 
   getClassForCell(id: string) {
     switch (this.map[id]) {
       case 1: return 'ball';
+      case 2: return 'wall';
       default: return 'cell';
     }
   }
 
-
-  currentPosition = '4:7';    //ball position => row:col
-  direction = '1:1'  //1:1 -1:1 -1:-1 1:-1 => x:y
-
-
   move() {
-    while(true) {
       this.updateDirection();
-      this.updatePosition();  // = move in current direction
+      this.moveInDirection();
+      this.drawBallInCurrentPosition();
+  }
+
+  drawBallInCurrentPosition() {
+    this.map[this.prevPosition] = 0;
+    this.map[this.currentPosition] = 1;
+  }
+
+  moveInDirection() {
+    const bRow = +this.currentPosition.split(':')[0];
+    const bCol = +this.currentPosition.split(':')[1];
+    const xDir = +this.direction.split(':')[0];
+    const yDir = +this.direction.split(':')[1];
+    let newXPos, newYPos;
+
+    //TODO to prettify
+    if (this.direction === '1:1' || this.direction === '-1:-1') {
+      newXPos = bRow - xDir;
+      newYPos = bCol + yDir;
+    } else {
+      newXPos = bRow + xDir;
+      newYPos = bCol - yDir;
     }
+
+    this.setPosition(newXPos, newYPos);
   }
 
-  updatePosition() {
-    this.getThreeNextCellsInCurrentDirection();
-    // move to the middle one
+  setDirection(x: number, y: number) {
+    this.direction = x + ':' + y;
   }
 
-  updateDirection(){
-    let walls = this.getThreeNextCellsInCurrentDirection(); //[1, 0, 1]
-
-
-
-
-    //change direction according to obstacles
+  setPosition(x: number, y: number) {
+    this.prevPosition = this.currentPosition;
+    this.currentPosition = x + ':' + y;
   }
 
-  getThreeNextCellsInCurrentDirection() {
-    let walls: number[] = []; //e.g. [0, 1, 0]
+  placeBallAfterClick(id: string){
+    this.setPosition(+id.split(':')[0],+id.split(':')[1]);
+    this.drawBallInCurrentPosition();
+  }
+
+  updateDirection() {
+    let walls = this.getThreeNextCellsInCurrentDirection();
 
     const x = +this.direction.split(':')[0];
     const y = +this.direction.split(':')[1];
+
+    let newX = 0;
+    let newY = 0;
+
+    switch (walls.join(':')) {
+      case '1:0:0':
+      case '1:1:0':
+        newX = x;
+        newY = -y;
+        break;
+
+      case '0:0:1':
+      case '0:1:1':
+        newX = -x;
+        newY = y;
+        break;
+
+      case '0:1:0':
+      case '1:1:1':
+      case '1:0:1':
+        newX = -x;
+        newY = -y;
+        break;
+
+      case '0:0:0':
+        newX = x;
+        newY = y;
+        break;
+    }
+
+    this.setDirection(newX, newY);
+
+  }
+
+  printt(){
+    console.log('direction: ' + this.direction);
+    console.log('current position: ' + this.currentPosition);
+    this.getThreeNextCellsInCurrentDirection();
+  }
+
+
+  getThreeNextCellsInCurrentDirection() {
+    let cells: number[] = [];
+
     const ballRow = +this.currentPosition.split(':')[0];
     const ballCol = +this.currentPosition.split(':')[1];
 
-    const leftCell = (ballRow + y) + ':' + (ballCol - x);
-    const rightCell = (ballRow - y) + ':' + (ballCol + x);
-    const middleCell = (ballRow + y) + ':' + (ballCol + x);
+    let leftCell = '';
+    let rightCell = '';
+    let middleCell = '';
 
-    walls.push(this.isCellEmpty(leftCell));
-    walls.push(this.isCellEmpty(rightCell));
-    walls.push(this.isCellEmpty(middleCell));
+    switch(this.direction) {
+      case '1:1':
+      leftCell = (ballRow - 1) + ':' + ballCol;
+      rightCell = ballRow + ':' + (ballCol + 1);
+      middleCell = (ballRow - 1) + ':' + (ballCol + 1);
+      break;
 
-    //currentPosition = row:col
-    //direction = X:Y (1:-1)
+      case '1:-1':
+      leftCell = ballRow + ':' + (ballCol + 1);
+      rightCell = (ballRow + 1) + ':' + ballCol;
+      middleCell = (ballRow + 1) + ':' + (ballCol + 1);
+      break;
 
-    //up-right dir (1:1)
-    // left: row = b.row-1; col = b.col
-    // rigt: row = b.row; col = b.col+1
-    // center: row = b.row-1; col = b.col+1
+      case '-1:1':
+      leftCell = ballRow + ':' + (ballCol - 1);
+      rightCell = (ballRow - 1) + ':' + ballCol;
+      middleCell = (ballRow - 1) + ':' + (ballCol - 1);
+      break;
 
-    //down-right dir (1:-1)
-    // left: row = b.row; col = b.col+1
-    // rigt: row = b.row+1; col = b.col
-    // center: row = b.row+1; col = b.col+1
+      case '-1:-1':
+      leftCell = (ballRow + 1) + ':' + ballCol;
+      rightCell = ballRow + ':' + (ballCol - 1);
+      middleCell = (ballRow + 1) + ':' + (ballCol - 1);
+      break;
+    }
 
-    //up-LEFT dir(-1:1):
-    // left: row = b.row; col = b.col-1
-    // rigt: row = b.row-1; col = b.col
-    // center: row = b.row-1; col = b.col-1
+    cells.push(this.isCellEmpty(leftCell));
+    cells.push(this.isCellEmpty(middleCell));
+    cells.push(this.isCellEmpty(rightCell));
 
-    //down-right dir (-1:-1)
-    // left: row = b.row+1; col = b.col
-    // rigt: row = b.row; col = b.col-1
-    // center: row = b.row+1; col = b.col-1
+    console.log('left cell: ' + leftCell);
+    console.log('right cell: ' + rightCell);
+    console.log('middle cell: ' + middleCell);
 
-   return walls;
+    return cells;
   }
 
   isCellEmpty(id: string) {
-    //returns 0 if cell is empty or 1 if collision should change ball direction
-    return 1;
+    if (this.map[id] === 2) {
+      return 1
+    }
+
+    return 0;
   }
-
-
 }
-
-
-
-// 4 directions left/right up/down
-// move:
-// 1) check area in front according to direction (3 squares in corner)
-// 2) if no walls -> move in the way of direction
-// 3) if a wall -> change direction
-// 4) repeat steps
