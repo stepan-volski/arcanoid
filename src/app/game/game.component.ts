@@ -8,15 +8,15 @@ import { Component, OnInit, Renderer2 } from '@angular/core';
 export class GameComponent implements OnInit {
   constructor(private renderer: Renderer2) {}
 
-  rows = Array.from({ length: 15 });
-  cells = Array.from({ length: 25 });
+  rows = Array.from({ length: 30 });
+  cells = Array.from({ length: 50 });
 
   map: { [id: string]: number } = {};
   currentPosition = '13:4';
   prevPosition = '';
   direction = '1:1';
   interval: any;
-  isDevMode = true;
+  isDevMode = false;
 
   ngOnInit(): void {
     this.initMap();
@@ -24,25 +24,34 @@ export class GameComponent implements OnInit {
   }
 
   initMap() {
+    //build walls
     for (let i = 0; i < this.rows.length; i++) {
       let leftId = i + ':' + 0;
       let rightId = i + ':' + (this.cells.length - 1);
       this.map[leftId] = 2;
       this.map[rightId] = 2;
     }
-
+    //build walls
     for (let i = 0; i< this.cells.length; i++) {
       let topId = 0 + ':' + i;
       let bottomId = (this.rows.length - 1) + ':' + i;
       this.map[topId] = 2;
       this.map[bottomId] = 2;
     }
+    //build bricks
+    for (let i = 1; i < this.rows.length - 1; i++) {
+      for (let j = this.cells.length / 2; j < this.cells.length - 1; j++) {
+        let id = i + ':' + j;
+        this.map[id] = 3;
+      }
+    }
   }
 
-  getClassForCell(id: string) {
+  getCellClass(id: string) {
     switch (this.map[id]) {
       case 1: return 'ball';
       case 2: return 'wall';
+      case 3: return 'brick';
       default: return 'cell';
     }
   }
@@ -91,12 +100,12 @@ export class GameComponent implements OnInit {
   }
 
   placeWallAfterClick(id: string){
-    this.map[id] = 2;
+    this.map[id] = 3;
   }
 
   updateDirection() {
-    let tmp = [...this.getThreeNextCellsInCurrentDirection()];
-    let cells = [this.isCellEmpty(tmp[0]), this.isCellEmpty(tmp[1]), this.isCellEmpty(tmp[2])];
+    let cells = [...this.getThreeNextCellsInCurrentDirection()];
+    let binaryCells = this.getBinaryCells(cells); //to see if cell has any object or not
 
     const x = +this.direction.split(':')[0];
     const y = +this.direction.split(':')[1];
@@ -104,7 +113,7 @@ export class GameComponent implements OnInit {
     let newX = 0;
     let newY = 0;
 
-    switch (cells.join(':')) {
+    switch (binaryCells.join(':')) {
       //collision from the left
       case '1:0:0':
       case '1:1:0':
@@ -142,6 +151,7 @@ export class GameComponent implements OnInit {
         break;
     }
 
+    this.handleCellCollision(cells);
     this.setDirection(newX, newY);
 
   }
@@ -199,12 +209,25 @@ export class GameComponent implements OnInit {
     return cells;
   }
 
-  isCellEmpty(id: string) {
-    if (this.map[id] === 2) {
-      return 1
+  handleCellCollision(cells: string[]) {
+    for (let cell of cells) {
+      if (this.map[cell] === 3) {
+        this.map[cell] = 0;
+      }
     }
+  }
 
-    return 0;
+  getBinaryCells(cells: string[]){
+    let arr: any[] = [];
+
+    cells.forEach(cell => {
+      if (this.map[cell] === 1 || this.map[cell] === 2 || this.map[cell] === 3) {
+        arr.push('1');
+      } else {
+        arr.push('0')
+      }
+    })
+    return arr;
   }
 
   stop(){
@@ -212,7 +235,7 @@ export class GameComponent implements OnInit {
   }
 
   start(){
-    this.interval = setInterval(()=> this.move(), 100);
+    this.interval = setInterval(()=> this.move(), 30);
   }
 
   toggleDevMode(){
