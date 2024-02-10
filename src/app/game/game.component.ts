@@ -1,4 +1,4 @@
-import { Component, OnInit, Renderer2 } from '@angular/core';
+import { Component, OnInit, } from '@angular/core';
 
 @Component({
   selector: 'app-game',
@@ -6,21 +6,50 @@ import { Component, OnInit, Renderer2 } from '@angular/core';
   styleUrls: ['./game.component.css'],
 })
 export class GameComponent implements OnInit {
-  constructor(private renderer: Renderer2) {}
+  constructor() {}
 
   rows = Array.from({ length: 30 });
   cells = Array.from({ length: 50 });
 
   map: { [id: string]: number } = {};
-  currentPosition = '13:4';
-  prevPosition = '';
-  direction = '1:1';
+  balls: { [id: string]: {
+    currentPosition: string,
+    prevPosition: string,
+    direction: string
+  }
+  } = {};
+
   interval: any;
   isDevMode = false;
+  ballIds: string[] = [];
 
   ngOnInit(): void {
     this.initMap();
-    this.drawBallInCurrentPosition();
+    this.initBalls();
+  }
+
+  initBalls(){
+    let ball0 = {
+      currentPosition: '12:4',
+      prevPosition: '',
+      direction: '1:1'
+    }
+
+    let ball1 = {
+      currentPosition: '17:35',
+      prevPosition: '',
+      direction: '-1:-1'
+    }
+
+
+    this.balls['0'] = ball0;
+    this.drawBallInCurrentPosition('0');
+    this.ballIds.push('0');
+
+
+    this.balls['1'] = ball1;
+    this.ballIds.push('1');
+    this.drawBallInCurrentPosition('1');
   }
 
   initMap() {
@@ -45,36 +74,65 @@ export class GameComponent implements OnInit {
         this.map[id] = 3;
       }
     }
+
+    //build stones
+    for (let i = 1; i < this.rows.length - 1; i++) {
+      for (let j = 1; j < this.cells.length / 2; j++) {
+        let id = i + ':' + j;
+        this.map[id] = 4;
+      }
+    }
   }
 
   getCellClass(id: string) {
     switch (this.map[id]) {
-      case 1: return 'ball';
+      case 0: return 'brickBall';
+      case 1: return 'stoneBall';
       case 2: return 'wall';
       case 3: return 'brick';
+      case 4: return 'stone';
       default: return 'cell';
     }
   }
 
   move() {
-      this.updateDirection();
-      this.moveInDirection();
-      this.drawBallInCurrentPosition();
+    for (let ball of this.ballIds) {
+      this.updateDirection(ball);
+      this.moveInDirection(ball);
+      this.drawBallInCurrentPosition(ball);
+    }
   }
 
-  drawBallInCurrentPosition() {
-    this.map[this.prevPosition] = 0;
-    this.map[this.currentPosition] = 1;
+  //todo: prettify
+  drawBallInCurrentPosition(id: string) {
+    let prevCell: number;
+    let ballType: number;
+
+    if(id==='0') {
+      prevCell = 4;
+      ballType = 0;
+    }
+
+    if(id==='1') {
+      prevCell = 3;
+      ballType = 1;
+    }
+
+    this.map[this.balls[id].prevPosition] = prevCell!;
+    this.map[this.balls[id].currentPosition] = ballType!;
   }
 
-  moveInDirection() {
-    const bRow = +this.currentPosition.split(':')[0];
-    const bCol = +this.currentPosition.split(':')[1];
-    const xDir = +this.direction.split(':')[0];
-    const yDir = +this.direction.split(':')[1];
+  moveInDirection(id: string) {
+    let currentPosition = this.balls[id].currentPosition;
+    let direction = this.balls[id].direction;
+
+    const bRow = +currentPosition.split(':')[0];
+    const bCol = +currentPosition.split(':')[1];
+    const xDir = +direction.split(':')[0];
+    const yDir = +direction.split(':')[1];
     let newXPos, newYPos;
 
-    if (this.direction === '1:1' || this.direction === '-1:-1') {
+    if (direction === '1:1' || direction === '-1:-1') {
       newXPos = bRow - xDir;
       newYPos = bCol + yDir;
     } else {
@@ -82,33 +140,25 @@ export class GameComponent implements OnInit {
       newYPos = bCol - yDir;
     }
 
-    this.setPosition(newXPos, newYPos);
+    this.setPosition(id, newXPos + ':' + newYPos);
   }
 
-  setDirection(x: number, y: number) {
-    this.direction = x + ':' + y;
+  setDirection(id: string, direction: string) {
+    this.balls[id].direction = direction;
   }
 
-  setPosition(x: number, y: number) {
-    this.prevPosition = this.currentPosition;
-    this.currentPosition = x + ':' + y;
+  setPosition(id: string, position: string) {
+    this.balls[id].prevPosition = this.balls[id].currentPosition;
+    this.balls[id].currentPosition = position;
   }
 
-  placeBallAfterClick(id: string){
-    this.setPosition(+id.split(':')[0],+id.split(':')[1]);
-    this.drawBallInCurrentPosition();
-  }
+  updateDirection(id: string) {
+    let cells = [...this.getThreeNextCellsInCurrentDirection(id)];
+    let binaryCells = this.getBinaryCells(id, cells); //to see if cell has any object or not
+    let direction = this.balls[id].direction;
 
-  placeWallAfterClick(id: string){
-    this.map[id] = 3;
-  }
-
-  updateDirection() {
-    let cells = [...this.getThreeNextCellsInCurrentDirection()];
-    let binaryCells = this.getBinaryCells(cells); //to see if cell has any object or not
-
-    const x = +this.direction.split(':')[0];
-    const y = +this.direction.split(':')[1];
+    const x = +direction.split(':')[0];
+    const y = +direction.split(':')[1];
 
     let newX = 0;
     let newY = 0;
@@ -117,7 +167,7 @@ export class GameComponent implements OnInit {
       //collision from the left
       case '1:0:0':
       case '1:1:0':
-        if (this.direction === '-1:-1' || this.direction === '1:1') {
+        if (direction === '-1:-1' || direction === '1:1') {
           newX = x;
           newY = -y; //change only up/down direction to opposite
         } else {
@@ -129,7 +179,7 @@ export class GameComponent implements OnInit {
       //collision from the right
       case '0:0:1':
       case '0:1:1':
-        if (this.direction === '-1:-1' || this.direction === '1:1') {
+        if (direction === '-1:-1' || direction === '1:1') {
           newX = -x;  //change only right/left direction to opposite
           newY = y;
         } else {
@@ -151,32 +201,40 @@ export class GameComponent implements OnInit {
         break;
     }
 
-    this.handleCellCollision(cells);
-    this.setDirection(newX, newY);
+    this.handleCellCollision(id, cells);
+    this.setDirection(id, newX + ':' + newY);
 
   }
 
-  print(){
-    console.log('direction: ' + this.direction);
-    console.log('current position: ' + this.currentPosition);
-    let cells = [...this.getThreeNextCellsInCurrentDirection()];
+  print(id: string){
+    console.log('ball id: ' + id)
+    console.log('direction: ' + this.balls[id].direction);
+    console.log('current position: ' + this.balls[id].currentPosition);
+    let cells = [...this.getThreeNextCellsInCurrentDirection(id)];
     console.log('left cell: ' + cells[0]);
     console.log('middle cell: ' + cells[1]);
     console.log('right cell: ' + cells[2]);
+
+    console.log(this.getBinaryCells('1',cells));
+    console.log(this.map[cells[0]]);
+    console.log(this.map[cells[1]]);
+    console.log(this.map[cells[2]]);
   }
 
 
-  getThreeNextCellsInCurrentDirection() {
+  getThreeNextCellsInCurrentDirection(id: string) {
     let cells: string[] = [];
+    let currentPosition = this.balls[id].currentPosition;
+    let direction = this.balls[id].direction;
 
-    const ballRow = +this.currentPosition.split(':')[0];
-    const ballCol = +this.currentPosition.split(':')[1];
+    const ballRow = +currentPosition.split(':')[0];
+    const ballCol = +currentPosition.split(':')[1];
 
     let leftCell = '';
     let rightCell = '';
     let middleCell = '';
 
-    switch(this.direction) {
+    switch(direction) {
       case '1:1':
       leftCell = (ballRow - 1) + ':' + ballCol;
       rightCell = ballRow + ':' + (ballCol + 1);
@@ -209,24 +267,41 @@ export class GameComponent implements OnInit {
     return cells;
   }
 
-  handleCellCollision(cells: string[]) {
+  //TODO prettify
+  handleCellCollision(id: string, cells: string[]) {
+
     for (let cell of cells) {
-      if (this.map[cell] === 3) {
-        this.map[cell] = 0;
+      if (id === '0' && this.map[cell] === 3) {
+        this.map[cell] = 4;
+      }
+      if (id === '1' && this.map[cell] === 4) {
+        this.map[cell] = 3;
       }
     }
   }
 
-  getBinaryCells(cells: string[]){
+
+  //TODO prettify ball type selection
+  getBinaryCells(id: string, cells: string[]){
     let arr: any[] = [];
 
-    cells.forEach(cell => {
-      if (this.map[cell] === 1 || this.map[cell] === 2 || this.map[cell] === 3) {
-        arr.push('1');
-      } else {
-        arr.push('0')
-      }
-    })
+    if (id === '0') {
+      cells.forEach(cell => {
+        if (this.map[cell] === 0 || this.map[cell] === 1 || this.map[cell] === 2 || this.map[cell] === 3) {
+          arr.push('1');
+        } else {
+          arr.push('0')
+        }
+      })
+    } else {
+      cells.forEach(cell => {
+        if (this.map[cell] === 0 || this.map[cell] === 1 || this.map[cell] === 2 || this.map[cell] === 4) {
+          arr.push('1');
+        } else {
+          arr.push('0')
+        }
+      })
+    }
     return arr;
   }
 
@@ -241,4 +316,15 @@ export class GameComponent implements OnInit {
   toggleDevMode(){
     this.isDevMode = !this.isDevMode;
   }
+
+  placeBrick(id: string){
+
+    if(this.map[id] === 3) {
+      this.map[id] = 4;
+    } else if(this.map[id] === 4) {
+      this.map[id] = 3;
+    }
+  };
+
 }
+

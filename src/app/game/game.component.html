@@ -3,8 +3,8 @@
     <div
       *ngFor="let cell of cells; let colIndex = index" class="cell" data-id="{{rowIndex +':'+ colIndex}}"
       [ngClass]="getCellClass(rowIndex +':'+ colIndex)"
-      (click)="placeWallAfterClick(rowIndex +':'+ colIndex)"
       [style.border]="isDevMode ? '1px solid black' : 'none'"
+      (click)="placeBrick(rowIndex +':'+ colIndex)"
       >
       <div *ngIf="isDevMode">
         {{rowIndex +':'+ colIndex}}
@@ -13,12 +13,12 @@
   </div>
 </div>
 
-<button (click)="print()">Print</button>
+<button (click)="print('1')">Print</button>
 <button (click)="move()">Move</button>
-<button (click)="setDirection(1, 1)">right-up(1:1)</button>
+<!-- <button (click)="setDirection(1, 1)">right-up(1:1)</button>
 <button (click)="setDirection(1, -1)">right-down(1:-1)</button>
 <button (click)="setDirection(-1, 1)">left-up(-1:1)</button>
-<button (click)="setDirection(-1, -1)">left-down(-1:-1)</button>
+<button (click)="setDirection(-1, -1)">left-down(-1:-1)</button> -->
 <button (click)="stop()">stop</button>
 <button (click)="start()">start</button>
 <button (click)="toggleDevMode()">devMode</button>
